@@ -1,0 +1,205 @@
+---
+title: "Dung Beetle Microbiome Figures"
+format: html
+editor: visual
+---
+
+## Dung beetle microbiome response to drenches
+
+**Hypotheses**
+
+1.  The use of drenches changes the dung beetles' microbiome composition
+
+2.  Dung beetles' microbiome changes with diet and it is more "volatile than the microbiome of other insects
+
+3.  Species richness of gut microbiome is lower than species richness from the rest of the dung beetle (gut vs whole)
+
+## Method notes
+
+**Treatments**
+
+-   Before: Dung beetles directly from the rearing facility -- from North Island, had different dung in their diet than in our study
+
+-   Control: Dung beetles that were not subjected to any drench in their diet during the experiment
+
+-   Drenches low: A known concentration of drenches was applied to the non-drenched dung and then fed to the beetles
+
+-   Drenches high: 10x concentration of the drenches low treatment was applied to the non-drenched dung and then fed to the beetles
+
+Drenches used:
+
+-   Silver: 5 5 g/l Moxidectin
+
+-   Blue: 2g/l abamectin, 80g/l levamisole and 45.3g/l oxfendazole
+
+-   Red: 80g/l levamisole and 45.3g/l oxfendazole
+
+    Key messages from the paper:
+
+-   Diet is the main factor in their microbiome composition
+
+-   Due to their changing microbiome nature, they are perfect candidate for microbiome engineering studies
+
+```         
+Known drench degraders:
+```
+
+-   Stenotrophomonas -- Family Xanthomonadaceae -- Class Gammaproteobacteria
+
+-   Aeromonas -- Family Aeromonadaceae -- Class Gammaproteobacteria
+
+```         
+Presumed drench degraders:
+```
+
+-   Pseudomonas -- Family Pseudomonadaceae -- Class Gammaproteobacteria
+
+    **Additional question: Gammaproteobacteria are known drench degraders - are they more prevalent in the gut of the dung beetle when exposed to drenches?**
+
+```{r}
+# packages
+library(phyloseq)
+library(tidyverse)
+library(readxl)
+library(decontam)
+
+# load data
+tax_df <- read_xlsx("Dung beetle microbiome paper/db_classified_16S.xlsx") %>% 
+  select(ASV,domain, phylum, class, order,family, genus)
+otu_df <- read_xlsx("Dung beetle microbiome paper/otu_frequency_table.xlsx")
+metadata_df <- read_xlsx("Dung beetle microbiome paper/Dung_beetles_metadata.xlsx") %>% 
+  separate(Treatment, c("Treatment_base", "level"), remove = F) %>% 
+  mutate(level = if_else(is.na(level), "NA", level)) %>% 
+  rename(Extraction = Exctraction)
+```
+
+```{r}
+# make phyloseq object
+otumat <- as.matrix(otu_df[-1])
+rownames(otumat) <- otu_df$ASV
+
+taxmat<- as.matrix(tax_df[-1])
+rownames(taxmat) <- tax_df$ASV
+
+
+
+OTU <- otu_table(otumat, taxa_are_rows = TRUE)
+TAX <- tax_table(taxmat)
+SAM <- sample_data(metadata_df)
+rownames(SAM) <- metadata_df$Samplename
+
+ps <- phyloseq(OTU, TAX)
+ps <- merge_phyloseq(ps, SAM)
+
+```
+
+```{r}
+# check library sizes
+
+df <- as.data.frame(sample_data(ps)) # Put sample_data into a ggplot-friendly data.frame
+df$LibrarySize <- sample_sums(ps)
+df <- df[order(df$LibrarySize),]
+df$Index <- seq(nrow(df))
+ggplot(data=df, aes(x=Index, y=LibrarySize, color=Treatment)) + geom_point()+
+  facet_grid(level~Treatment_base)
+
+
+```
+
+Library size looks good! The negative and wash samples have very few reads. And the others look like they have a similar spread.
+
+```{r}
+# clean the data using the control sample "Wash" and "Negative controls"
+
+sample_data(ps)$is.neg <- sample_data(ps)$Decontamination == "Control_sample"
+contamdf.prev <- isContaminant(ps, method="prevalence", neg="is.neg", threshold = 0.5) ## increase the threshold from 0.1 to 0.5
+table(contamdf.prev$contaminant) ## 18 contaminants found
+
+ps.noncontam_bac <- prune_taxa(!contamdf.prev$contaminant, ps) ## drop these 18 contaminants
+
+DATA = ps.noncontam_bac  %>% 
+  subset_samples(Decontamination != "Control_sample") # drop these controls and just keep the real samples that are now "clean"
+
+```
+
+```{r}
+
+
+# selected 15,000 based on the library depths above; drops 13 samples and 60 OTUs
+## could also use other methods for normalisation!
+DATA_rarefied = rarefy_even_depth(physeq=DATA,sample.size=15000,rngseed=7,replace=FALSE,trimOTUs=TRUE,verbose=TRUE) 
+
+DATA_rarefied <- prune_taxa(taxa_sums(DATA_rarefied)>0, DATA_rarefied)
+  
+
+```
+
+**Hypotheses**
+
+1.  The use of drenches changes the dung beetles' microbiome composition
+
+```{r}
+# just the drench and the control samples - exclude the "before" samples
+DATA_experiment <- DATA_rarefied %>% 
+  subset_samples(Treatment != "Before") # drop these
+
+DATA_experiment <- prune_taxa(taxa_sums(DATA_experiment)>0, DATA_experiment)
+  
+
+ord <- ordinate(DATA_experiment, "MDS", "bray")
+
+plot_ordination(DATA_experiment, ord, color = "Treatment_base", shape = "level") +
+  geom_point(size = 3)+
+  scale_color_manual(values = c( "blue2",
+                                  "black", "red2",
+                                 "grey70"))+
+  theme_test()+
+  facet_wrap(~Extraction)
+    
+
+psotu2veg <- function(physeq) {
+  OTU <- otu_table(physeq)
+  if (taxa_are_rows(OTU)) {
+    OTU <- t(OTU)
+  }
+  return(as(OTU, "matrix"))
+}
+
+# 
+
+df_OTU <- psotu2veg(DATA_experiment) ## taxa are now columns and rows are samples, this is the correct format for vegan
+
+df_metadata <- data.frame(sample_data(DATA_experiment)) %>% 
+  unite(trt_extraction, c("Treatment", "Extraction"), sep = "_", remove = F) %>% 
+  unite(trt_base_extraction, c("Treatment_base", "Extraction"), sep = "_", remove = F)
+
+library(vegan)
+dist.mat_all <- vegdist(df_OTU, method = "bray", binary=F)
+
+
+
+OTU_distmat_all <-
+  as.matrix(dist.mat_all, labels = T)
+
+adon.results_all<-vegan::adonis2(OTU_distmat_all ~ Treatment_base*Extraction*level, data = df_metadata, method="bray",perm=999) ## Treatment, extraction and their interaction are all significant
+
+adon.results_all
+## do pairwise analysis to see which groups are different
+
+## pairwise permanova
+library(pairwiseAdonis)
+pairwise.adonis(OTU_distmat_all,df_metadata$trt_base_extraction, p.adjust.m ="bonferroni")# -- is all n.s. not sure if we want to do this
+
+
+# 
+# perm <- how(nperm = 199)
+# setBlocks(perm) <- with(metadata_df, sample)
+# blocked_adonis_away <- adonis2(OTU_distmat_all_away ~ time.point*treat, data = metadata_df_away, permutations = perm) ## 
+# 
+# blocked_adonis_away
+
+```
+
+2.  Dung beetles' microbiome changes with diet and it is more "volatile than the microbiome of other insects
+
+3.  Species richness of gut microbiome is lower than species richness from the rest of the dung beetle (gut vs whole)
