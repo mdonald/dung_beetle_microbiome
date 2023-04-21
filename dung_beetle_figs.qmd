@@ -220,7 +220,7 @@ plot_ordination(DATA_experiment, ord, color = "Treatment_base", shape = "level")
   geom_point(size = 3)+
   scale_color_manual(values = c( "blue2",
                                   "black", "red2",
-                                 "grey70"))+
+                                 "grey70"))+ # **These colors are *ugly* change these!**
   theme_test()+
   facet_wrap(~Extraction)
     
@@ -270,7 +270,7 @@ adon.results_all
 library(pairwiseAdonis)
 pairwise.adonis(OTU_distmat_all,df_metadata$trt_base_extraction, p.adjust.m ="bonferroni")# -- interesting pairwise comparisons here, control is never different from the treatments -- could suggest that the treatments cause the gut microbiome to become more variable, but that the control communities are still persisting -- trts "add" to the control community?
 ```
-**These colors are *ugly* change these!**
+
 
 Interesting pairwise comparisons here, control is never different from the treatments -- could suggest that the treatments cause the gut microbiome to become more variable, but that the control communities are still persisting -- trts "add" to the control community?
 
@@ -509,7 +509,7 @@ relative_abundance_bacterial_exp <- ggplot(df_bact_exp, aes(Extraction, Abundanc
     text = element_text(size = 14))+
   theme(strip.text.x = element_text(size = 14),
         legend.text = element_text(size = 12))+
-  labs(x = "time point",
+  labs(x = "",
        y = "relative abundance")+
   theme(legend.position = "bottom",
         legend.title = element_text("Class"))+
