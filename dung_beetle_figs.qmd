@@ -1,12 +1,14 @@
 ---
 title: "Dung Beetle Microbiome Figures"
-format: html
+format:
+  html:
+    self-contained: true
 editor: visual
 ---
 
 ## Dung beetle microbiome response to drenches
 
-**Hypotheses**
+**Hypotheses** -- *Think it might be cleaner for this paper to pose these hypotheses as questions - that we then answer with the following analyses. Think it sets this up as an exploratory study, otherwise I'd expect the hypotheses to be clearer in which direction a change would be expected.*
 
 1.  The use of drenches changes the dung beetles' microbiome composition
 
@@ -134,9 +136,75 @@ DATA_rarefied <- prune_taxa(taxa_sums(DATA_rarefied)>0, DATA_rarefied)
 
 ```
 
-**Hypotheses**
+**Hypotheses** 1. Dung beetles' microbiome changes with diet and it is more "volatile than the microbiome of other insects - *Have switched this order, because I think it helps set the stage for why we might expect changes in the microbiome -- it's flexible in the dung beetle"*
 
-1.  The use of drenches changes the dung beetles' microbiome composition
+```{r}
+# just the before and control samples to address the effects of diet
+DATA_diet <- DATA_rarefied %>% 
+  subset_samples(Treatment == "Before" |
+                   Treatment == "Control") 
+
+DATA_diet <- prune_taxa(taxa_sums(DATA_diet)>0, DATA_diet)
+  
+
+ord <- ordinate(DATA_diet, "MDS", "bray")
+
+plot_ordination(DATA_diet, ord, color = "Treatment") +
+  geom_point(size = 3)+
+  scale_color_manual(values = c( "#6D1238", "#D991AF"))+
+  theme_test()+
+  facet_wrap(~Extraction)
+    
+
+psotu2veg <- function(physeq) {
+  OTU <- otu_table(physeq)
+  if (taxa_are_rows(OTU)) {
+    OTU <- t(OTU)
+  }
+  return(as(OTU, "matrix"))
+}
+
+# 
+df_sample <- data.frame(sample_data(DATA_diet)) %>% 
+  unite(trt_base_extraction, c("Treatment_base", "Extraction"), sep = "_", remove = F)
+
+# make this sample data and add back in, to then drop the one control gut sample
+df_sample <- sample_data(df_sample)
+
+DATA_diet <- merge_phyloseq(DATA_diet,df_sample)
+
+DATA_diet_no_Cgut <- DATA_diet %>% 
+  subset_samples(trt_base_extraction != "Control_gut") # drops the one control gut sample
+
+DATA_diet_no_Cgut <- prune_taxa(taxa_sums(DATA_diet_no_Cgut)>0, DATA_diet_no_Cgut) # drops 11 taxa that were unique to the control gut sample
+  
+
+df_OTU <- psotu2veg(DATA_diet_no_Cgut) ## taxa are now columns and rows are samples, this is the correct format for vegan
+
+df_metadata <- data.frame(sample_data(DATA_diet_no_Cgut)) %>% 
+  unite(trt_extraction, c("Treatment", "Extraction"), sep = "_", remove = F) 
+
+library(vegan)
+dist.mat_all <- vegdist(df_OTU, method = "bray", binary=F)
+
+
+
+OTU_distmat_all <-
+  as.matrix(dist.mat_all, labels = T)
+
+adon.results_all<-vegan::adonis2(OTU_distmat_all ~ Treatment_base+Extraction, data = df_metadata, method="bray",perm=999) ## only treatment is significant
+
+adon.results_all
+## since only treatment is found to be significant, stop here and don't proceed with pairwise comparison
+
+## pairwise permanova
+#library(pairwiseAdonis)
+#pairwise.adonis(OTU_distmat_all,df_metadata$trt_base_extraction, p.adjust.m ="bonferroni")# -- before gut and control whole are different, but that's it
+```
+
+The beetles experienced a shift in diet and environment and this affected the bacterial composition of their microbiome (R2 = .24, df = 1, p = 0.002). Sampling location (gut vs exterior) was not a significant predictor of the bacterial composition (R2 = .14, df = 1, p = 0.073). (*The control gut sample was excluded from the statistical analyses as following preliminary cleaning steps only a single sample remained.*)
+
+2.  The use of drenches changes the dung beetles' microbiome composition and diversity
 
 ```{r}
 # just the drench and the control samples - exclude the "before" samples
@@ -166,12 +234,24 @@ psotu2veg <- function(physeq) {
 }
 
 # 
-
-df_OTU <- psotu2veg(DATA_experiment) ## taxa are now columns and rows are samples, this is the correct format for vegan
-
-df_metadata <- data.frame(sample_data(DATA_experiment)) %>% 
-  unite(trt_extraction, c("Treatment", "Extraction"), sep = "_", remove = F) %>% 
+df_sample <- data.frame(sample_data(DATA_experiment)) %>% 
   unite(trt_base_extraction, c("Treatment_base", "Extraction"), sep = "_", remove = F)
+
+# make this sample data and add back in, to then drop the one control gut sample
+df_sample <- sample_data(df_sample)
+
+DATA_experiment <- merge_phyloseq(DATA_experiment,df_sample)
+
+DATA_experiment_no_Cgut <- DATA_experiment %>% 
+  subset_samples(trt_base_extraction != "Control_gut") # drops the one control gut sample
+
+DATA_experiment_no_Cgut <- prune_taxa(taxa_sums(DATA_experiment_no_Cgut)>0, DATA_experiment_no_Cgut) # drops 1 taxon that was unique to the control gut sample
+  
+
+df_OTU <- psotu2veg(DATA_experiment_no_Cgut) ## taxa are now columns and rows are samples, this is the correct format for vegan
+
+df_metadata <- data.frame(sample_data(DATA_experiment_no_Cgut)) %>% 
+  unite(trt_extraction, c("Treatment", "Extraction"), sep = "_", remove = F) 
 
 library(vegan)
 dist.mat_all <- vegdist(df_OTU, method = "bray", binary=F)
@@ -189,17 +269,254 @@ adon.results_all
 ## pairwise permanova
 library(pairwiseAdonis)
 pairwise.adonis(OTU_distmat_all,df_metadata$trt_base_extraction, p.adjust.m ="bonferroni")# -- interesting pairwise comparisons here, control is never different from the treatments -- could suggest that the treatments cause the gut microbiome to become more variable, but that the control communities are still persisting -- trts "add" to the control community?
+```
+**These colors are *ugly* change these!**
+
+Interesting pairwise comparisons here, control is never different from the treatments -- could suggest that the treatments cause the gut microbiome to become more variable, but that the control communities are still persisting -- trts "add" to the control community?
+
+```{r}
+#beta diversity
+
+### permutation test for homogeneity of multivariate dispersions
+beta_all<- betadisper(dist.mat_all, df_metadata$trt_base_extraction, type = "centroid")
+
+permutest(beta_all) ## sig dispersion
 
 
-# 
-# perm <- how(nperm = 199)
-# setBlocks(perm) <- with(metadata_df, sample)
-# blocked_adonis_away <- adonis2(OTU_distmat_all_away ~ time.point*treat, data = metadata_df_away, permutations = perm) ## 
-# 
-# blocked_adonis_away
+
+
+
+df_all<- data.frame(beta_all$distances) 
+
+df_all$samplename <- rownames(df_all)
+
+df_all2 <- cbind(df_metadata, df_all) 
+
+
+
+
+shapiro.test(df_all2$beta_all.distances) ## meets assumptions of normality
+
+m0 <- lm(beta_all.distances ~ 1 , data = df_all2)
+m1 <- lm(beta_all.distances ~ Treatment_base, data = df_all2)
+m2 <-  lm(beta_all.distances ~ Extraction, data = df_all2)
+m3 <-  lm(beta_all.distances ~ level, data = df_all2)
+m4 <- lm(beta_all.distances ~ Treatment_base + Extraction, data = df_all2)
+m5 <- lm(beta_all.distances ~ Treatment_base + level, data = df_all2)
+m6 <- lm(beta_all.distances ~ Extraction + level, data = df_all2)
+m7<- lm(beta_all.distances ~ Treatment_base * Extraction, data = df_all2)
+m8<- lm(beta_all.distances ~ Treatment_base * level, data = df_all2)
+m9<- lm(beta_all.distances ~ Extraction * level, data = df_all2)
+m10<- lm(beta_all.distances ~ Treatment_base*Extraction * level, data = df_all2)
+
+anova(m1)
+library(AICcmodavg)
+
+#define list of models
+models <- list(m0, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10)
+
+#specify model names
+mod.names <- c('null', 'treatment', 'extraction', 'level', 
+              'trt+ext', 'trt+level', 'ext+level',
+              'trt*ext', 'trt*level', 'ext*level','interaction')
+
+#calculate AIC of each model
+aictab(cand.set = models, modnames = mod.names) ## extraction method is the best predictor of beta diversity; drench treatment is NOT a key predictor
+
+anova(m2)
+
+beta_all_plot <- ggplot(df_all2, aes(trt_base_extraction, beta_all.distances, color = Treatment_base))+
+  geom_boxplot()+
+    geom_point(position = position_jitterdodge())
+
+beta_extraction_plot <- ggplot(df_all2, aes(Extraction, beta_all.distances, color = Extraction))+
+  geom_boxplot()+
+  scale_color_manual(values = c("#407F7F","#003333"))+
+    geom_point(aes(shape = Treatment_base),position = position_jitterdodge(dodge.width = 0.15))+
+  theme_test()+
+  labs(y = "beta diversity")
+
+beta_extraction_plot
 
 ```
 
-2.  Dung beetles' microbiome changes with diet and it is more "volatile than the microbiome of other insects
+Based on model selection, extraction location (gut vs whole) is the key driver of bacterial beta diversity, with microbial communities in the gut being more variable (higher beta diversity) than those on the exterior of the beetles (F = 18.291, df =1, p \< 0.001). Treatment and amount of drench are not significant predictors of beta diversity.
 
-3.  Species richness of gut microbiome is lower than species richness from the rest of the dung beetle (gut vs whole)
+```{r}
+#alpha diversity
+alpha_div = estimate_richness(DATA_rarefied, split=T, measures = c("Observed", "Chao", "Shannon")) %>% 
+  rownames_to_column("Samplename")
+
+alpha_df <- data.frame(sample_data(DATA_rarefied)) %>% 
+  left_join(alpha_div, by = "Samplename") %>% 
+    unite(trt_base_extraction, c("Treatment_base", "Extraction"), sep = "_", remove = F)
+## just do the analysis on the experimental group
+
+alpha_experiment <- alpha_df %>% 
+  filter(Treatment != "Before")
+
+shapiro.test(alpha_experiment$Shannon)
+
+m0 <- lm(Shannon ~ 1 , data = alpha_experiment)
+m1 <- lm(Shannon ~ Treatment, data = alpha_experiment)
+m2 <-  lm(Shannon ~ Extraction, data = alpha_experiment)
+m3 <- lm(Shannon ~ Treatment + Extraction, data = alpha_experiment)
+m4 <- lm(Shannon ~ Treatment * Extraction, data = alpha_experiment)
+
+anova(m4)
+library(AICcmodavg)
+
+#define list of models
+models <- list(m0, m1, m2, m3, m4)
+
+#specify model names
+mod.names <- c('null', 'treatment', 'extraction', 'additive', 'interaction')
+
+#calculate AIC of each model
+aictab(cand.set = models, modnames = mod.names) ## extraction method is the best predictor of alpha diversity; drench treatment is NOT a key predictor
+
+anova(m2)
+
+ggplot(alpha_experiment, aes(Extraction, Shannon, color = Extraction))+
+  geom_boxplot(aes(Extraction))+
+  geom_point(aes(shape = Treatment_base),position = position_jitterdodge(dodge.width = 0.15))+
+  scale_color_manual(values = c("#407F7F","#003333"))+
+  theme_test()+
+  theme(legend.position = "none")
+
+```
+
+3.  Species richness of gut microbiome is lower than species richness from the rest of the dung beetle (gut vs whole) -- *Seems like the gut/external microbiome comparison ends up being the key result, think it's worthwhile including composition and diversity in this question*
+
+-   We've basically already addressed this in the analyses above. Across the board sampling location (gut vs. whole/external) is a key predictor of composition, alpha, and beta diversity. We see that compositions are different, beta diversity is **higher** in the gut than on the exoskeleton (? is this what was sampled?) and alpha diversity is **lower** in the gut than on the exoskeleton.
+
+**Look at taxonomic composition**
+```{r}
+DATA_composition_tax <- DATA_rarefied
+
+metadata_tax <- data.frame(sample_data(DATA_composition_tax)) %>% 
+  unite(trt_extraction, c("Treatment", "Extraction"), sep = "_", remove = F) 
+
+metadata_tax2 <- sample_data(metadata_tax)
+DATA_composition_tax <- merge_phyloseq(DATA_composition_tax,metadata_tax2)
+
+## bacteria shared figure
+ps <- tax_glom(DATA_composition_tax, "class")
+#ps0 <- transform_sample_counts(ps, function(x) x / sum(x))
+ps1 <- merge_samples(ps, "trt_extraction")
+ps2 <- transform_sample_counts(ps1, function(x) x / sum(x))
+df2 <- psmelt(ps2)
+
+
+df_test2 <- df2 %>% 
+  ungroup() %>% 
+  group_by(class) %>% 
+    dplyr::filter(Abundance != "NaN") %>% 
+  dplyr::mutate(total_Abundance_Class = sum(Abundance)) %>% 
+  dplyr::filter(Abundance != 0) %>% 
+  dplyr::ungroup() %>% 
+  dplyr::mutate(Class_character = as.character(class),
+                New_Class = case_when(total_Abundance_Class < .05 ~ "Low abundance",
+                                        total_Abundance_Class > .05 ~ Class_character)) %>% 
+  mutate(Extraction = if_else(str_detect(Sample, "gut"), "gut", "whole")) %>% 
+  mutate(Treatment = str_remove(Sample, "_gut"),
+         Treatment = str_remove(Treatment, "_whole"),
+        Treatment_base = str_remove(Treatment, "_Low"),
+         Treatment_base = str_remove(Treatment_base, "_High")) %>% 
+  mutate(level = if_else(str_detect(Sample, "Low"), "low", if_else(str_detect(Sample, "High"), "high", "NA")))
+  
+
+df_bact = df_test2 %>% 
+  mutate(trt_order = fct_relevel(Treatment_base, 
+            "Before", "Control", "Red", 
+            "Blue", "Silver"))
+library(viridis) 
+library(RColorBrewer)
+mycolors = c(brewer.pal(name="Dark2", n = 8), brewer.pal(name="Paired", n = 8))
+
+
+x2 <- factor(df_bact$New_Class)
+old.lvl2<-levels(x2)
+
+df_bact$Class<-factor(x2, levels=c(sort(old.lvl2[old.lvl2!="Low abundance"], decreasing=F), "Low abundance"))
+
+
+
+
+relative_abundance_bacterial <- ggplot(df_bact, aes(Extraction, Abundance, fill = Class)) +
+  geom_col()+
+  
+  scale_fill_manual(values = c("#6E2C00", "#BA4A00", "#E67E22", "#B7950B", "#7D6608",
+                               "#186A3B", "#28B463", "#45B39D", "#EAFAF1", "#03A9F4",
+                               "#85C1E9", "#21618C", "#154360", "gray40", "#7D3C98", "#D2B4DE",
+                               "#F8BBD0", "#F06292", "#D81B60", "#880E4F", "gray40", "#EF9A9A","gray40", "#7986CB", "#303F9F", "#1B2631", "black", "blue"))+
+  
+  theme(
+    axis.text.y = element_text(size = 12),
+    text = element_text(size = 14))+
+  theme(strip.text.x = element_text(size = 14),
+        legend.text = element_text(size = 12))+
+  labs(x = "time point",
+       y = "relative abundance")+
+  theme(legend.position = "bottom",
+        legend.title = element_text("Class"))+
+  theme_test()+
+  facet_grid(level~ trt_order)
+```
+
+```{r}
+#think it'll look better if before and control are separate from the low and high groupings -- but could always drop low and high and just have a single row for each
+
+df_bact_BC <- df_bact %>% 
+  filter(Treatment_base == "Control" |
+           Treatment_base == "Before")
+
+relative_abundance_bacterial_BC <- ggplot(df_bact_BC, aes(Extraction, Abundance, fill = Class)) +
+  geom_col()+
+  
+  scale_fill_manual(values = c("#6E2C00", "#BA4A00", "#E67E22", "#B7950B", "#7D6608",
+                               "#186A3B", "#28B463", "#45B39D", "#EAFAF1", "#03A9F4",
+                               "#85C1E9", "#21618C", "#154360", "gray40", "#7D3C98", "#D2B4DE",
+                               "#F8BBD0", "#F06292", "#D81B60", "#880E4F", "gray40", "#EF9A9A","gray40", "#7986CB", "#303F9F", "#1B2631", "black", "blue"))+
+  
+  theme(
+    axis.text.y = element_text(size = 12),
+    text = element_text(size = 14))+
+  theme(strip.text.x = element_text(size = 14),
+        legend.text = element_text(size = 12))+
+  labs(x = "time point",
+       y = "relative abundance")+
+  theme_test()+
+  facet_grid(~ trt_order)+
+  theme(legend.position = "none")
+
+
+
+df_bact_exp <- df_bact %>% 
+  filter(Treatment_base != "Control") %>% 
+  filter(Treatment_base != "Before")
+
+relative_abundance_bacterial_exp <- ggplot(df_bact_exp, aes(Extraction, Abundance, fill = Class)) +
+  geom_col()+
+  
+  scale_fill_manual(values = c("#6E2C00", "#BA4A00", "#E67E22", "#B7950B", "#7D6608",
+                               "#186A3B", "#28B463", "#45B39D", "#EAFAF1", "#03A9F4",
+                               "#85C1E9", "#21618C", "#154360", "gray40", "#7D3C98", "#D2B4DE",
+                               "#F8BBD0", "#F06292", "#D81B60", "#880E4F", "gray40", "#EF9A9A","gray40", "#7986CB", "#303F9F", "#1B2631", "black", "blue"))+
+  
+  theme(
+    axis.text.y = element_text(size = 12),
+    text = element_text(size = 14))+
+  theme(strip.text.x = element_text(size = 14),
+        legend.text = element_text(size = 12))+
+  labs(x = "time point",
+       y = "relative abundance")+
+  theme(legend.position = "bottom",
+        legend.title = element_text("Class"))+
+  theme_test()+
+  facet_grid(level~ trt_order)
+
+# combine plots
+library(patchwork)
+relative_abundance_bacterial_BC + relative_abundance_bacterial_exp
+```
