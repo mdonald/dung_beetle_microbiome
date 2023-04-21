@@ -188,7 +188,7 @@ adon.results_all
 
 ## pairwise permanova
 library(pairwiseAdonis)
-pairwise.adonis(OTU_distmat_all,df_metadata$trt_base_extraction, p.adjust.m ="bonferroni")# -- is all n.s. not sure if we want to do this
+pairwise.adonis(OTU_distmat_all,df_metadata$trt_base_extraction, p.adjust.m ="bonferroni")# -- interesting pairwise comparisons here, control is never different from the treatments -- could suggest that the treatments cause the gut microbiome to become more variable, but that the control communities are still persisting -- trts "add" to the control community?
 
 
 # 
