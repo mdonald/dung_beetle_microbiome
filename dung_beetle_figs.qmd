@@ -2,9 +2,9 @@
 title: "Dung Beetle Microbiome Figures"
 execute: 
   echo: false
-html:
-    embed-resources: true
-editor: visual
+format:
+  html:
+     embed-resources: true
 ---
 
 ## Dung beetle microbiome response to drenches
@@ -166,6 +166,7 @@ ord <- ordinate(DATA_diet, "MDS", "bray")
 plot_ordination(DATA_diet, ord, color = "Treatment", shape = "Extraction") +
   geom_point(size = 3)+
   scale_color_manual(values = c( "grey80", "black"))+
+  stat_ellipse(aes(group = Treatment))+
   theme_test()
     
 
@@ -205,7 +206,7 @@ dist.mat_all <- vegdist(df_OTU, method = "bray", binary=F)
 OTU_distmat_all <-
   as.matrix(dist.mat_all, labels = T)
 
-adon.results_all<-vegan::adonis2(OTU_distmat_all ~ Treatment_base+Extraction, data = df_metadata, method="bray",perm=999) ## only treatment is significant
+adon.results_all<-vegan::adonis2(OTU_distmat_all ~ Treatment_base*Extraction, data = df_metadata, method="bray",perm=999) ## only treatment is significant
 
 adon.results_all
 ## since only treatment is found to be significant, stop here and don't proceed with pairwise comparison
@@ -215,7 +216,7 @@ adon.results_all
 #pairwise.adonis(OTU_distmat_all,df_metadata$trt_base_extraction, p.adjust.m ="bonferroni")# -- before gut and control whole are different, but that's it
 ```
 
-The beetles experienced a shift in diet and environment and this affected the bacterial composition of their microbiome (R2 = .21, F= 2.95 df = 1, p = 0.005). Sampling location (gut vs exterior) was not a significant predictor of the bacterial composition (R2 = .08, F = 1.16 df = 1, p = 0.328).
+The beetles experienced a shift in diet and environment and this affected the bacterial composition of their microbiome (R2 = .21, F= 2.95 df = 1, p = 0.005). Sampling location (gut vs exterior) was not a significant predictor of the bacterial composition (R2 = 0.08, F = 1.16 df = 1, p = 0.328), nor was their interaction (R2 = 0.09, F = 1.35, p = 0.193).
 
 **2. The use of drenches changes the dung beetles' microbiome composition and diversity.**
 
@@ -280,7 +281,7 @@ site.scrs <- cbind(site.scrs, Treatment_base = df_metadata$Treatment_base) #add 
 site.scrs <- cbind(site.scrs, Drench = df_metadata$Drench) 
 
 
-head(site.scrs)
+#head(site.scrs)
 
 drench_composition_plot <- ggplot(site.scrs, aes(MDS1, MDS2, color = Drench, shape = Extraction))+
   geom_point(alpha = .8, size = 3, aes(shape = Extraction))+ 
@@ -291,18 +292,18 @@ drench_composition_plot <- ggplot(site.scrs, aes(MDS1, MDS2, color = Drench, sha
 
 drench_composition_plot
 
-adon.results_drench<-vegan::adonis2(OTU_distmat_all ~ Extraction+Drench, data = df_metadata, method="bray",perm=999) 
+adon.results_drench<-vegan::adonis2(OTU_distmat_all ~ Extraction*Drench, data = df_metadata, method="bray",perm=999) 
 
 adon.results_drench ## extraction is the key predictor but Drench does affect the composition (but it's small)
 ```
 
-Composition of the bacterial communities is primarily driven by extraction location (R2 = 0.12, F = 8.02, df = 1, p = 0.001), but drench is also a key predictor of bacterial composition (R2 = 0.04, F = 2.65, p = 0.005). (\*No ellipse is calculated for the control gut samples, due to too few points.)
+Composition of the bacterial communities is primarily driven by extraction location (R2 = 0.12, F = 8.02, df = 1, p = 0.001), but drench is also a key predictor of bacterial composition (R2 = 0.04, F = 2.65, df = 1, p = 0.005). (\*No ellipse is calculated for the control gut samples, due to too few points.) Their interaction was not a significant predictor of bacterial composition (R2 = 0.02, F = 1.42, df = 1, p = 0.121).
 
-Since these sample sizes are wildly different, I don't think it makes sense to compare alpha and beta diversities at this level of resolution. Since drench did come out as a predictor (with a small influence), I think it makes sense to dig into the drench types and see if they also affect the community composition and diversity.
+- *Since these sample sizes are wildly different, I don't think it makes sense to compare alpha and beta diversities at this level of resolution. Since drench did come out as a predictor (with a small influence), I think it makes sense to dig into the drench types and see if they also affect the community composition and diversity.*
 
 **Do the different drenches have different effects on composition and diversity?**
 
--   Compostion
+-   Composition
 
 ```{r}
 
