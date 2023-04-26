@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>Dung Beetle Microbiome Figures</title>
+<title>Dung Beetle Microbiome Figures and Statiscal Analyses</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -2544,7 +2544,7 @@ vertical-align: -.125em;
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">Dung Beetle Microbiome Figures</h1>
+<h1 class="title">Dung Beetle Microbiome Figures and Statiscal Analyses</h1>
 </div>
 
 
@@ -2633,12 +2633,12 @@ Permutation: free
 Number of permutations: 999
 
 vegan::adonis2(formula = OTU_distmat_all ~ Treatment_base * Extraction, data = df_metadata, permutations = 999, method = &quot;bray&quot;)
-                          Df SumOfSqs      R2      F Pr(&gt;F)    
-Treatment_base             1   0.9005 0.17367 2.9886  0.001 ***
-Extraction                 1   0.3628 0.06997 1.2042  0.281    
-Treatment_base:Extraction  1   0.3061 0.05903 1.0158  0.436    
-Residual                  12   3.6159 0.69733                  
-Total                     15   5.1854 1.00000                  
+                          Df SumOfSqs      R2      F Pr(&gt;F)   
+Treatment_base             1   0.9005 0.17367 2.9886  0.004 **
+Extraction                 1   0.3628 0.06997 1.2042  0.262   
+Treatment_base:Extraction  1   0.3061 0.05903 1.0158  0.430   
+Residual                  12   3.6159 0.69733                 
+Total                     15   5.1854 1.00000                 
 ---
 Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
 </div>
@@ -2667,8 +2667,8 @@ Number of permutations: 999
 vegan::adonis2(formula = OTU_distmat_all ~ Extraction * Drench, data = df_metadata, permutations = 999, method = &quot;bray&quot;)
                   Df SumOfSqs      R2      F Pr(&gt;F)    
 Extraction         1   2.5029 0.10807 8.4734  0.001 ***
-Drench             1   0.8566 0.03699 2.8999  0.003 ** 
-Extraction:Drench  1   0.3052 0.01318 1.0332  0.399    
+Drench             1   0.8566 0.03699 2.8999  0.002 ** 
+Extraction:Drench  1   0.3052 0.01318 1.0332  0.394    
 Residual          66  19.4952 0.84177                  
 Total             69  23.1598 1.00000                  
 ---
@@ -2697,7 +2697,7 @@ vegan::adonis2(formula = OTU_distmat_all ~ Extraction * Treatment_base, data = d
                           Df SumOfSqs      R2      F Pr(&gt;F)    
 Extraction                 1   2.5029 0.10807 8.7958  0.001 ***
 Treatment_base             3   2.0258 0.08747 2.3731  0.001 ***
-Extraction:Treatment_base  3   0.9888 0.04270 1.1584  0.250    
+Extraction:Treatment_base  3   0.9888 0.04270 1.1584  0.225    
 Residual                  62  17.6423 0.76176                  
 Total                     69  23.1598 1.00000                  
 ---
@@ -2709,57 +2709,57 @@ Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&
 <div class="cell-output cell-output-stdout">
 <pre><code>                           pairs Df   SumsOfSqs    F.Model         R2 p.value
 1         Blue_gut vs Blue_whole  1 0.026279813  6.3624083 0.26115679   0.005
-2        Blue_gut vs Control_gut  1 0.002798929  0.6009258 0.04418271   0.634
-3      Blue_gut vs Control_whole  1 0.012979633  2.7686558 0.17557970   0.044
-4            Blue_gut vs Red_gut  1 0.003997628  0.7915245 0.04212136   0.492
-5          Blue_gut vs Red_whole  1 0.032861789  7.1979313 0.28565564   0.002
-6         Blue_gut vs Silver_gut  1 0.007560344  1.5786090 0.08062927   0.186
-7       Blue_gut vs Silver_whole  1 0.029746499  7.2161232 0.28617100   0.003
-8      Blue_whole vs Control_gut  1 0.018127362  5.9256418 0.31310123   0.003
-9    Blue_whole vs Control_whole  1 0.012574741  4.0701458 0.23843650   0.002
-10         Blue_whole vs Red_gut  1 0.037274256  9.5672435 0.34705115   0.001
-11       Blue_whole vs Red_whole  1 0.002706855  0.7935813 0.04222619   0.533
+2        Blue_gut vs Control_gut  1 0.002798929  0.6009258 0.04418271   0.627
+3      Blue_gut vs Control_whole  1 0.012979633  2.7686558 0.17557970   0.064
+4            Blue_gut vs Red_gut  1 0.003997628  0.7915245 0.04212136   0.500
+5          Blue_gut vs Red_whole  1 0.032861789  7.1979313 0.28565564   0.004
+6         Blue_gut vs Silver_gut  1 0.007560344  1.5786090 0.08062927   0.199
+7       Blue_gut vs Silver_whole  1 0.029746499  7.2161232 0.28617100   0.002
+8      Blue_whole vs Control_gut  1 0.018127362  5.9256418 0.31310123   0.002
+9    Blue_whole vs Control_whole  1 0.012574741  4.0701458 0.23843650   0.003
+10         Blue_whole vs Red_gut  1 0.037274256  9.5672435 0.34705115   0.003
+11       Blue_whole vs Red_whole  1 0.002706855  0.7935813 0.04222619   0.523
 12      Blue_whole vs Silver_gut  1 0.043368903 11.9318062 0.39863302   0.001
-13    Blue_whole vs Silver_whole  1 0.010602517  3.5726212 0.16560905   0.011
-14  Control_gut vs Control_whole  1 0.005233950  1.5881537 0.16563707   0.182
-15        Control_gut vs Red_gut  1 0.003923163  0.9054006 0.06511144   0.467
-16      Control_gut vs Red_whole  1 0.020005013  5.4637588 0.29591801   0.004
-17     Control_gut vs Silver_gut  1 0.005180638  1.3045289 0.09119691   0.251
+13    Blue_whole vs Silver_whole  1 0.010602517  3.5726212 0.16560905   0.009
+14  Control_gut vs Control_whole  1 0.005233950  1.5881537 0.16563707   0.195
+15        Control_gut vs Red_gut  1 0.003923163  0.9054006 0.06511144   0.476
+16      Control_gut vs Red_whole  1 0.020005013  5.4637588 0.29591801   0.001
+17     Control_gut vs Silver_gut  1 0.005180638  1.3045289 0.09119691   0.238
 18   Control_gut vs Silver_whole  1 0.015486297  5.0812908 0.28102478   0.002
-19      Control_whole vs Red_gut  1 0.014118243  3.2355795 0.19928944   0.027
-20    Control_whole vs Red_whole  1 0.010240402  2.7738473 0.17585103   0.033
-21   Control_whole vs Silver_gut  1 0.016504595  4.1244595 0.24085195   0.020
+19      Control_whole vs Red_gut  1 0.014118243  3.2355795 0.19928944   0.033
+20    Control_whole vs Red_whole  1 0.010240402  2.7738473 0.17585103   0.035
+21   Control_whole vs Silver_gut  1 0.016504595  4.1244595 0.24085195   0.018
 22 Control_whole vs Silver_whole  1 0.004830794  1.5694197 0.10772012   0.167
-23          Red_gut vs Red_whole  1 0.043724267 10.0956612 0.35933168   0.001
-24         Red_gut vs Silver_gut  1 0.002434447  0.5344805 0.02883709   0.712
+23          Red_gut vs Red_whole  1 0.043724267 10.0956612 0.35933168   0.002
+24         Red_gut vs Silver_gut  1 0.002434447  0.5344805 0.02883709   0.682
 25       Red_gut vs Silver_whole  1 0.034959065  8.9920519 0.33313703   0.001
 26       Red_whole vs Silver_gut  1 0.051080686 12.5514692 0.41083030   0.001
-27     Red_whole vs Silver_whole  1 0.004780976  1.4050614 0.07240696   0.216
+27     Red_whole vs Silver_whole  1 0.004780976  1.4050614 0.07240696   0.195
 28    Silver_gut vs Silver_whole  1 0.040470987 11.1598667 0.38271323   0.001
    p.adjusted sig
 1       0.140    
 2       1.000    
 3       1.000    
 4       1.000    
-5       0.056    
+5       0.112    
 6       1.000    
-7       0.084    
-8       0.084    
-9       0.056    
-10      0.028   .
+7       0.056    
+8       0.056    
+9       0.084    
+10      0.084    
 11      1.000    
 12      0.028   .
-13      0.308    
+13      0.252    
 14      1.000    
 15      1.000    
-16      0.112    
+16      0.028   .
 17      1.000    
 18      0.056    
-19      0.756    
-20      0.924    
-21      0.560    
+19      0.924    
+20      0.980    
+21      0.504    
 22      1.000    
-23      0.028   .
+23      0.056    
 24      1.000    
 25      0.028   .
 26      0.028   .
