@@ -59,12 +59,13 @@ Presumed drench degraders:
 
     **Additional question: Gammaproteobacteria are known drench degraders - are they more prevalent in the gut of the dung beetle when exposed to drenches?**
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 # packages
 library(phyloseq)
 library(tidyverse)
 library(readxl)
 library(decontam)
+library(ggbeeswarm)
 
 # load data
 tax_df <- read_xlsx("Dung beetle microbiome paper/db_classified_16S.xlsx") %>% 
@@ -134,9 +135,7 @@ DATA = ps.noncontam_bac  %>%
 
 Before we normalize, we'll use decontam to account for any contamination (as seen in our negative controls). Based on this, we'll drop 18 OTUs.
 
-```{r, warning=FALE, message=FALSE}
-
-
+```{r, warning=FALSE, message=FALSE}
 # selected 10,000 based on the library depths above; drops 13 samples and 60 OTUs
 ## could also use other methods for normalisation!
 #DATA_rarefied = rarefy_even_depth(physeq=DATA,sample.size=10000,rngseed=7,replace=FALSE,trimOTUs=TRUE,verbose=TRUE) 
@@ -358,15 +357,15 @@ Using pariwise permanova with a Bonferroni correction for multiple comparisons, 
 -     Control gut vs Blue whole
 -     Control gut vs Silver whole
 
--   Blue whole vs Red gut
+-       Blue whole vs Red gut
 
--   Blue whole vs Silver whole
+-      Blue whole vs Silver whole
 
--   Red gut vs Red whole
-- Red gut vs Silver whole
+-       Red gut vs Red whole
+-     Red gut vs Silver whole
 
--   Red whole vs Silver gut
-- Silver gut vs Silver whole
+-       Red whole vs Silver gut
+-     Silver gut vs Silver whole
 
 The bacterial composition of the control gut communities was significantly different from the drench whole communities for the Blue and Silver treatments. (*can also talk about the other significant comparisons*)
 ```{r}
@@ -394,6 +393,17 @@ beta_extraction_plot <- ggplot(df_all2, aes(Extraction, beta_all.distances, colo
 beta_all_plot <- ggplot(df_all2, aes(Extraction, beta_all.distances, color = Treatment_base, shape = Extraction))+
   geom_boxplot(outlier.size = 0)+
   geom_point(size = 3, alpha = .6, aes(shape = Extraction),position = position_jitterdodge(jitter.width = .0))+ 
+  scale_color_manual(values = c("#72122A", "black","#D1686D","#EA9FB0"))+
+  theme_test()+
+  scale_shape(guide="none") +
+    labs(y = "beta diversity")+
+ guides(color=guide_legend(title="Treatment"))
+
+
+beta_single_plot <- ggplot(df_all2, aes(Extraction, beta_all.distances, shape = Extraction))+
+  geom_boxplot(outlier.size = 0)+
+  geom_beeswarm(size = 3, alpha = 0.7, aes(color = Treatment_base,shape = Extraction))+
+ # geom_point(size = 3, alpha = .6, aes(shape = Extraction),position = position_jitterdodge(jitter.width = .0))+ 
   scale_color_manual(values = c("#72122A", "black","#D1686D","#EA9FB0"))+
   theme_test()+
   scale_shape(guide="none") +
@@ -438,8 +448,8 @@ lm_beta_results <- aictab(cand.set = models_beta, modnames = mod.names_beta) ## 
 
 
 ```{r}
-#alpha diversity 
-alpha_div = estimate_richness(DATA_normalized, split=T, measures = c("Shannon")) %>% 
+#alpha diversity - on the raw, non-normalized data
+alpha_div = estimate_richness(DATA, split=T, measures = c("Shannon")) %>% 
   rownames_to_column("Samplename")
 
 alpha_df <- data.frame(sample_data(DATA)) %>% 
@@ -453,6 +463,18 @@ alpha_experiment <- alpha_df %>%
 alpha_all_plot <- ggplot(alpha_experiment, aes(Extraction, Shannon, color = Treatment_base, shape = Extraction))+
   geom_boxplot(outlier.size = 0)+
   geom_point(size = 3, alpha = .6, aes(shape = Extraction),position = position_jitterdodge(jitter.width = .0))+ 
+  scale_color_manual(values = c("#72122A", "black","#D1686D","#EA9FB0"))+
+  theme_test()+
+  scale_shape(guide="none") +
+    labs(y = "alpha diversity")+
+ guides(color=guide_legend(title="Treatment"))+
+  theme(legend.position = "none")
+
+
+alpha_single_plot <- ggplot(alpha_experiment, aes(Extraction, Shannon, shape = Extraction))+
+  geom_boxplot(outlier.size = 0)+
+    geom_beeswarm(size = 3, alpha = 0.7, aes(color = Treatment_base,shape = Extraction))+
+  #geom_point(size = 3, alpha = .6, aes(color = Treatment_base,shape = Extraction), position = "jitter")+ 
   scale_color_manual(values = c("#72122A", "black","#D1686D","#EA9FB0"))+
   theme_test()+
   scale_shape(guide="none") +
@@ -499,12 +521,20 @@ lm_alpha_results <- aictab(cand.set = models, modnames = mod.names) ## extractio
 library(patchwork)
 alpha_all_plot + beta_all_plot
 ```
+Alternative figure for alpha and beta diversity
+```{r}
+# alpha and beta diversity plots
+alpha_single_plot + beta_single_plot
+```
+**Model results for alpha diversity**
 ```{r}
 # alpha diversity model results - from AIC model selection and an F-test.
 lm_alpha_results
 anova(m2)
 ```
-Based on model selection, extraction location was the significant predictor of the best fit model (Table Model Selection SXS). Through comparison of this model with a null, intercept-only model, we found that bacterial alpha diversity is driven by extraction location (gut vs whole), with microbial communities in the gut being less diverse than those on the exterior of the beetles (F = 6.66, df =1, p \< 0.012. Drench treatment and control are not significant predictors of alpha diversity. - *Have dropped the amount of drench from these analyses, since it doesn't appear to have a major impact but also the sample size within each of the groups is low and it's not significant in the model selection.*
+Based on model selection, extraction location was the significant predictor of the best fit model for alpha diversity (based on the Shannon Index) (Table Model Selection SXS). Through comparison of this model with a null, intercept-only model, we found that bacterial alpha diversity is driven by extraction location (gut vs whole), with microbial communities in the gut being less diverse than those on the exterior of the beetles (F = 6.66, df =1, p \< 0.012. Drench treatment and control are not significant predictors of alpha diversity. - *Have dropped the amount of drench from these analyses, since it doesn't appear to have a major impact but also the sample size within each of the groups is low and it's not significant in the model selection.*
+
+**Model results for beta diversity**
 ```{r}
 # beta diversity model results
 lm_beta_results
