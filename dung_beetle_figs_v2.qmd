@@ -9,7 +9,7 @@ format:
 
 ## Dung beetle microbiome response to drenches
 
-**Hypotheses** -- *Could pose these hypotheses as questions - that we then answer with the following analyses. Think it sets this up as an exploratory study, otherwise I'd expect the hypotheses to be clearer in which direction a change would be expected.*
+**Hypotheses** -- 
 
 1.  The use of drenches changes the dung beetles' microbiome composition
 
@@ -77,7 +77,8 @@ metadata_df <- read_xlsx("Dung beetle microbiome paper/Dung_beetles_metadata.xls
   rename(Extraction = Exctraction) %>% 
   mutate(Drench = if_else(Treatment_base == "Silver" |
                             Treatment_base == "Blue" |
-                            Treatment_base == "Red", "Drench", "Control"))
+                            Treatment_base == "Red", "Drench", "Control")) %>%  
+    mutate(Extraction_final = if_else(str_detect(Extraction, "whole"), "exoskeleton", "gut"))
 ```
 
 ```{r}
@@ -107,7 +108,7 @@ df <- as.data.frame(sample_data(ps)) # Put sample_data into a ggplot-friendly da
 df$LibrarySize <- sample_sums(ps)
 df <- df[order(df$LibrarySize),]
 df$Index <- seq(nrow(df))
-ggplot(data=df, aes(x=Index, y=LibrarySize, color=Extraction, shape = level)) + 
+ggplot(data=df, aes(x=Index, y=LibrarySize, color=Extraction_final, shape = level)) + 
   facet_grid(.~Treatment_base)+
   geom_hline(yintercept = 10000, color = "navy", linetype = 2)+
   scale_color_manual(values = c("#764B8E", "grey","grey","grey","#55AA55"))+
@@ -172,11 +173,14 @@ DATA_diet <- prune_taxa(taxa_sums(DATA_diet)>0, DATA_diet)
 
 ord <- ordinate(DATA_diet, "MDS", "bray")
 
-plot_ordination(DATA_diet, ord, color = "Treatment", shape = "Extraction") +
+diet_composition_PCoA <- plot_ordination(DATA_diet, ord, color = "Extraction_final", shape = "Treatment") +
   geom_point(size = 3)+
-  scale_color_manual(values = c( "grey80", "black"))+
-  stat_ellipse(aes(group = Treatment))+
-  theme_test()
+  scale_color_manual(values = c("black","#7D151A"))+
+  scale_shape_manual(values = c(15, 19))+
+  stat_ellipse(aes(group = Treatment, linetype = Treatment))+
+  scale_linetype_manual(values=c("dashed", "solid"))+
+  theme_test()+
+  labs(x = "MDS1", y = "MDS2")
     
 
 psotu2veg <- function(physeq) {
@@ -189,7 +193,7 @@ psotu2veg <- function(physeq) {
 
 # 
 df_sample <- data.frame(sample_data(DATA_diet)) %>% 
-  unite(trt_base_extraction, c("Treatment_base", "Extraction"), sep = "_", remove = F)
+  unite(trt_base_extraction, c("Treatment_base", "Extraction_final"), sep = "_", remove = F)
 
 # make this sample data and add back in, to then drop the one control gut sample
 df_sample <- sample_data(df_sample)
@@ -205,7 +209,7 @@ DATA_diet <- merge_phyloseq(DATA_diet,df_sample)
 df_OTU <- psotu2veg(DATA_diet) ## taxa are now columns and rows are samples, this is the correct format for vegan
 
 df_metadata <- data.frame(sample_data(DATA_diet)) %>% 
-  unite(trt_extraction, c("Treatment", "Extraction"), sep = "_", remove = F) 
+  unite(trt_extraction, c("Treatment", "Extraction_final"), sep = "_", remove = F) 
 
 library(vegan)
 dist.mat_all <- vegdist(df_OTU, method = "bray", binary=F)
@@ -215,7 +219,7 @@ dist.mat_all <- vegdist(df_OTU, method = "bray", binary=F)
 OTU_distmat_all <-
   as.matrix(dist.mat_all, labels = T)
 
-adon.results_all<-vegan::adonis2(OTU_distmat_all ~ Treatment_base*Extraction, data = df_metadata, method="bray",perm=999) ## only treatment is significant
+adon.results_all<-vegan::adonis2(OTU_distmat_all ~ Treatment_base*Extraction_final, data = df_metadata, method="bray",perm=999) ## only treatment is significant
 
 adon.results_all
 ## since only treatment is found to be significant, stop here and don't proceed with pairwise comparison
@@ -285,21 +289,21 @@ OTU_distmat_all <-
 ord_all <- capscale(df_OTU ~ 1, distance = "bray", data=df_OTU) ## this does PCoA
 
 site.scrs <- as.data.frame(scores(ord_all, display = "sites")) #save  results into dataframe
-site.scrs <- cbind(site.scrs, Extraction = df_metadata$Extraction) #add grouping variable "Extraction" to dataframe
+site.scrs <- cbind(site.scrs, Extraction = df_metadata$Extraction_final) #add grouping variable "Extraction" to dataframe
 site.scrs <- cbind(site.scrs, Treatment_base = df_metadata$Treatment_base) #add grouping variable of cluster grouping to dataframe
 site.scrs <- cbind(site.scrs, Drench = df_metadata$Drench) 
 
 
 #head(site.scrs)
 
-drench_composition_plot <- ggplot(site.scrs, aes(MDS1, MDS2, color = Drench))+
-  geom_point(alpha = .8, size = 3, aes(shape = Extraction))+ 
+extraction_composition_plot <- ggplot(site.scrs, aes(MDS1, MDS2, color = Extraction))+
+  geom_point(alpha = .8, size = 3, aes(shape = Drench))+ 
   scale_color_manual(values = c("black","#7D151A"))+
    #stat_ellipse()+
-  stat_ellipse(mapping = aes(MDS1, MDS2, color = Drench))+
+  stat_ellipse(mapping = aes(MDS1, MDS2, color = Extraction))+
   theme_test()
 
-drench_composition_plot
+extraction_composition_plot
 
 adon.results_drench<-vegan::adonis2(OTU_distmat_all ~ Extraction*Drench, data = df_metadata, method="bray",perm=999) 
 
@@ -400,15 +404,16 @@ beta_all_plot <- ggplot(df_all2, aes(Extraction, beta_all.distances, color = Tre
  guides(color=guide_legend(title="Treatment"))
 
 
-beta_single_plot <- ggplot(df_all2, aes(Extraction, beta_all.distances, shape = Extraction))+
+beta_single_plot <- ggplot(df_all2, aes(Extraction_final, beta_all.distances))+
   geom_boxplot(outlier.size = 0)+
-  geom_beeswarm(size = 3, alpha = 0.7, aes(color = Treatment_base,shape = Extraction))+
+  geom_beeswarm(size = 3, alpha = 0.7, aes(color = Extraction_final,shape = Drench))+
  # geom_point(size = 3, alpha = .6, aes(shape = Extraction),position = position_jitterdodge(jitter.width = .0))+ 
-  scale_color_manual(values = c("#72122A", "black","#D1686D","#EA9FB0"))+
+  scale_color_manual(values = c( "black","#72122A","#D1686D","#EA9FB0"))+
   theme_test()+
   scale_shape(guide="none") +
-    labs(y = "beta diversity")+
- guides(color=guide_legend(title="Treatment"))
+    labs(y = "beta diversity",
+         x="")+
+ guides(color=guide_legend(title="Extraction"))
 
 ## check for normality of residuals --- here and below
 
@@ -454,7 +459,9 @@ alpha_div = estimate_richness(DATA, split=T, measures = c("Shannon")) %>%
 
 alpha_df <- data.frame(sample_data(DATA)) %>% 
   left_join(alpha_div, by = "Samplename") %>% 
-    unite(trt_base_extraction, c("Treatment_base", "Extraction"), sep = "_", remove = F)
+    unite(trt_base_extraction, c("Treatment_base", "Extraction"), sep = "_", remove = F) %>% 
+    mutate(Extraction_final = if_else(str_detect(Extraction, "whole"), "exoskeleton", "gut"))
+  
 ## just do the analysis on the experimental group
 
 alpha_experiment <- alpha_df %>% 
@@ -463,7 +470,7 @@ alpha_experiment <- alpha_df %>%
 alpha_all_plot <- ggplot(alpha_experiment, aes(Extraction, Shannon, color = Treatment_base, shape = Extraction))+
   geom_boxplot(outlier.size = 0)+
   geom_point(size = 3, alpha = .6, aes(shape = Extraction),position = position_jitterdodge(jitter.width = .0))+ 
-  scale_color_manual(values = c("#72122A", "black","#D1686D","#EA9FB0"))+
+  scale_color_manual(values = c( "black","#72122A","#D1686D","#EA9FB0"))+
   theme_test()+
   scale_shape(guide="none") +
     labs(y = "alpha diversity")+
@@ -471,14 +478,15 @@ alpha_all_plot <- ggplot(alpha_experiment, aes(Extraction, Shannon, color = Trea
   theme(legend.position = "none")
 
 
-alpha_single_plot <- ggplot(alpha_experiment, aes(Extraction, Shannon, shape = Extraction))+
+alpha_single_plot <- ggplot(alpha_experiment, aes(Extraction_final, Shannon))+
   geom_boxplot(outlier.size = 0)+
-    geom_beeswarm(size = 3, alpha = 0.7, aes(color = Treatment_base,shape = Extraction))+
+    geom_beeswarm(size = 3, alpha = 0.7, aes(color = Extraction_final,shape = Drench))+
   #geom_point(size = 3, alpha = .6, aes(color = Treatment_base,shape = Extraction), position = "jitter")+ 
-  scale_color_manual(values = c("#72122A", "black","#D1686D","#EA9FB0"))+
+  scale_color_manual(values = c("black","#72122A","#D1686D","#EA9FB0"))+
   theme_test()+
   scale_shape(guide="none") +
-    labs(y = "alpha diversity")+
+    labs(y = "alpha diversity",
+         x = "")+
  guides(color=guide_legend(title="Treatment"))+
   theme(legend.position = "none")
 
@@ -488,10 +496,10 @@ alpha_single_plot <- ggplot(alpha_experiment, aes(Extraction, Shannon, shape = E
 # qqPlot(alpha_experiment$Shannon)
 
 m0 <- lm(Shannon ~ 1 , data = alpha_experiment)
-m1 <- lm(Shannon ~ Treatment, data = alpha_experiment)
+m1 <- lm(Shannon ~ Treatment_base, data = alpha_experiment)
 m2 <-  lm(Shannon ~ Extraction, data = alpha_experiment)
-m3 <- lm(Shannon ~ Treatment + Extraction, data = alpha_experiment)
-m4 <- lm(Shannon ~ Treatment * Extraction, data = alpha_experiment)
+m3 <- lm(Shannon ~ Treatment_base + Extraction, data = alpha_experiment)
+m4 <- lm(Shannon ~ Treatment_base * Extraction, data = alpha_experiment)
 
 #anova(m4)
 
@@ -519,12 +527,12 @@ lm_alpha_results <- aictab(cand.set = models, modnames = mod.names) ## extractio
 ```{r}
 # alpha and beta diversity plots
 library(patchwork)
-alpha_all_plot + beta_all_plot
+#alpha_all_plot + beta_all_plot
 ```
 Alternative figure for alpha and beta diversity
 ```{r}
 # alpha and beta diversity plots
-alpha_single_plot + beta_single_plot
+(alpha_single_plot + beta_single_plot)
 ```
 **Model results for alpha diversity**
 ```{r}
@@ -581,7 +589,8 @@ df_test2 <- df2 %>%
          Treatment = str_remove(Treatment, "_whole"),
         Treatment_base = str_remove(Treatment, "_Low"),
          Treatment_base = str_remove(Treatment_base, "_High")) %>% 
-  mutate(level = if_else(str_detect(Sample, "Low"), "low", if_else(str_detect(Sample, "High"), "high", "NA")))
+  mutate(level = if_else(str_detect(Sample, "Low"), "low", if_else(str_detect(Sample, "High"), "high", "NA"))) %>% 
+  mutate(Extraction_final = if_else(str_detect(Extraction, "whole"), "exoskeleton", "gut"))
   
 
 df_bact = df_test2 %>% 
@@ -601,7 +610,7 @@ df_bact$Class<-factor(x2, levels=c(sort(old.lvl2[old.lvl2!="Low abundance"], dec
 
 
 
-relative_abundance_bacterial <- ggplot(df_bact, aes(Extraction, Abundance, fill = Class)) +
+relative_abundance_bacterial <- ggplot(df_bact, aes(Extraction_final, Abundance, fill = Class)) +
   geom_col()+
   
   scale_fill_manual(values = c("#6E2C00", "#BA4A00", "#E67E22", "#B7950B", "#7D6608",
@@ -629,7 +638,7 @@ df_bact_BC <- df_bact %>%
   filter(Treatment_base == "Control" |
            Treatment_base == "Before")
 
-relative_abundance_bacterial_BC <- ggplot(df_bact_BC, aes(Extraction, Abundance, fill = Class)) +
+relative_abundance_bacterial_BC <- ggplot(df_bact_BC, aes(trt_order, Abundance, fill = Class)) +
   geom_col()+
   
   scale_fill_manual(values = c("#6E2C00", "#BA4A00", "#E67E22", "#B7950B", "#7D6608",
@@ -642,17 +651,25 @@ relative_abundance_bacterial_BC <- ggplot(df_bact_BC, aes(Extraction, Abundance,
     text = element_text(size = 14))+
   theme(strip.text.x = element_text(size = 14),
         legend.text = element_text(size = 12))+
-  labs(x = "extraction",
+  labs(x = "",
        y = "relative abundance")+
   theme_test()+
-  facet_grid(~ trt_order)+
-  theme(legend.position = "none")
+  facet_grid(~ Extraction_final)+
+  theme(legend.position = "bottom")
 
+
+## pull out dataset for Eva
+df_BC_simple <- df_bact_BC %>% 
+  select(Treatment, Extraction_final, Abundance, New_Class) %>% 
+  mutate(Abundance_percent = Abundance*100) %>% 
+  mutate(across(Abundance_percent, round, 2))
+
+write.csv(df_BC_simple, "data_befoer_control_rel_abu.csv")
 
 
 df_bact_exp <- df_bact %>% 
   filter(Treatment_base != "Control") %>% 
-  filter(Treatment_base != "Before")
+  filter(Treatment_base != "Before") 
 
 relative_abundance_bacterial_exp <- ggplot(df_bact_exp, aes(Extraction, Abundance, fill = Class)) +
   geom_col()+
@@ -705,7 +722,7 @@ df_test2 <- df2 %>%
   dplyr::mutate(Class_character = as.character(class),
                 New_Class = case_when(total_Abundance_Class < .05 ~ "Low abundance",
                                         total_Abundance_Class > .05 ~ Class_character)) %>% 
-  mutate(Extraction = if_else(str_detect(Sample, "gut"), "gut", "whole")) %>% 
+  mutate(Extraction = if_else(str_detect(Sample, "gut"), "gut", "exoskeleton")) %>% 
   mutate(Treatment = str_remove(Sample, "_gut"),
          Treatment = str_remove(Treatment, "_whole"),
         Treatment_base = str_remove(Treatment, "_Low"),
@@ -753,6 +770,88 @@ relative_abundance_bacterial <- ggplot(df_bact, aes(Extraction, Abundance, fill 
 relative_abundance_bacterial
 ```
 
+```{r, warning=FALSE, message=FALSE}
+# don't want to split by level -- just pool by control vs drench
+
+DATA_composition_tax <- DATA_normalized
+
+metadata_tax <- data.frame(sample_data(DATA_composition_tax)) %>% 
+  unite(trt_extraction, c("Treatment", "Extraction"), sep = "_", remove = F) %>% 
+  unite(trt_base_extraction, c("Treatment_base", "Extraction"), sep = "_", remove = F) %>% 
+  mutate(Drench = if_else(Treatment_base == "Before", "Before", Drench)) %>% 
+  unite(drench_extraction, c("Drench", "Extraction_final"), sep = "_", remove = F)
+
+metadata_tax2 <- sample_data(metadata_tax)
+DATA_composition_tax_drench_ID <- merge_phyloseq(DATA_composition_tax,metadata_tax2) 
+
+DATA_composition_tax_drench <- DATA_composition_tax_drench_ID %>% 
+  subset_samples(Treatment != "Before")
+
+# control and drench
+
+
+## bacteria shared figure
+ps <- tax_glom(DATA_composition_tax_drench, "class")
+#ps0 <- transform_sample_counts(ps, function(x) x / sum(x))
+ps1 <- merge_samples(ps, "drench_extraction")
+ps2 <- transform_sample_counts(ps1, function(x) x / sum(x))
+df2 <- psmelt(ps2)
+
+
+df_test2 <- df2 %>% 
+  ungroup() %>% 
+  group_by(class) %>% 
+    dplyr::filter(Abundance != "NaN") %>% 
+  dplyr::mutate(total_Abundance_Class = sum(Abundance)) %>% 
+  dplyr::filter(Abundance != 0) %>% 
+  dplyr::ungroup() %>% 
+  dplyr::mutate(Class_character = as.character(class),
+                New_Class = case_when(total_Abundance_Class < .05 ~ "Low abundance",
+                                         total_Abundance_Class > .05 ~ Class_character)) %>% 
+   mutate(Extraction = if_else(str_detect(Sample, "gut"), "gut", "exoskeleton")) %>% 
+   mutate(Drench = if_else(str_detect(Sample, "Drench"), "Diet 2 + parasiticide", "Diet 2")) %>% 
+  #       Treatment_base = str_remove(Treatment, "_Low"),
+  #        Treatment_base = str_remove(Treatment_base, "_High")) %>% 
+  mutate(level = if_else(str_detect(Sample, "Low"), "low", if_else(str_detect(Sample, "High"), "high", "NA")))
+  
+
+
+library(viridis) 
+library(RColorBrewer)
+mycolors = c(brewer.pal(name="Dark2", n = 8), brewer.pal(name="Paired", n = 8))
+
+
+x2 <- factor(df_test2$New_Class)
+old.lvl2<-levels(x2)
+
+df_test2$Class<-factor(x2, levels=c(sort(old.lvl2[old.lvl2!="Low abundance"], decreasing=F), "Low abundance"))
+
+
+
+
+relative_abundance_bacterial <- ggplot(df_test2, aes(Drench, Abundance, fill = Class)) +
+  geom_col()+
+  
+  scale_fill_manual(values = c("#6E2C00", "#BA4A00", "#E67E22", "#B7950B", "#7D6608",
+                               "#186A3B", "#28B463", "#45B39D", "#EAFAF1", "#03A9F4",
+                               "#85C1E9", "#21618C", "#154360", "gray40", "#7D3C98", "#D2B4DE",
+                               "#F8BBD0", "#F06292", "#D81B60", "#880E4F", "gray40", "#EF9A9A","gray40", "#7986CB", "#303F9F", "#1B2631", "black", "blue"))+
+  
+  theme(
+    axis.text.y = element_text(size = 12),
+    text = element_text(size = 14))+
+  theme(strip.text.x = element_text(size = 14),
+        legend.text = element_text(size = 12))+
+  labs(x = "",
+       y = "Relative abundance")+
+  theme_test()+
+  facet_grid(.~ Extraction)+
+ theme(legend.position = "bottom")
+
+relative_abundance_bacterial
+```
+
+
 Composition of bacterial taxa pooled at the Class level. Low abundance taxa are ones that were less than 25% of the total.
 
 Finally, we're interested in whether known drench degraders (and the presumed drench degrader) are in our samples and if they respond to the drench treatment. We see variation in the Class Gammaproteobacteria in the figure, but we can look to see if these specific genera are responding.
@@ -772,7 +871,7 @@ Presumed drench degrader
 ```{r, results = FALSE, warning=FALSE, message=FALSE}
 # Stenotrophomonas
 
-drench <- subset_taxa(DATA_composition_tax, genus=="Stenotrophomonas" |
+drench <- subset_taxa(DATA_composition_tax_drench_ID, genus=="Stenotrophomonas" |
                         genus == "Aeromonas" |
                         genus == "Pseudomonas")
 
@@ -795,7 +894,7 @@ df_test2 <- df2 %>%
   dplyr::mutate(Class_character = as.character(class),
                 New_Class = case_when(total_Abundance_Class < .05 ~ "Low abundance",
                                         total_Abundance_Class > .05 ~ Class_character)) %>% 
-  mutate(Extraction = if_else(str_detect(Sample, "gut"), "gut", "whole")) %>% 
+  mutate(Extraction = if_else(str_detect(Sample, "gut"), "gut", "exoskeleton")) %>% 
   mutate(Treatment = str_remove(Sample, "_gut"),
          Treatment = str_remove(Treatment, "_whole"),
         Treatment_base = str_remove(Treatment, "_Low"),
@@ -833,7 +932,7 @@ relative_abundance_bacterial_degraders <- ggplot(df_bact, aes(Extraction, Abunda
     text = element_text(size = 14))+
   theme(strip.text.x = element_text(size = 14),
         legend.text = element_text(size = 12))+
-  labs(x = "Extraction",
+  labs(x = "",
        y = "Relative abundance")+
   theme(legend.position = "bottom",
         legend.title = element_text("Class"))+
@@ -843,3 +942,82 @@ relative_abundance_bacterial_degraders <- ggplot(df_bact, aes(Extraction, Abunda
 relative_abundance_bacterial_degraders
 
 ```
+
+```{r}
+# degraders pooled at each grouping
+drench <- subset_taxa(DATA_composition_tax_drench_ID, genus=="Stenotrophomonas" |
+                        genus == "Aeromonas" |
+                        genus == "Pseudomonas")
+
+
+## bacteria shared figure
+ps <- tax_glom(drench, "genus")
+#ps0 <- transform_sample_counts(ps, function(x) x / sum(x))
+ps1 <- merge_samples(ps, "drench_extraction")
+ps2 <- transform_sample_counts(ps1, function(x) x / sum(x))
+df2 <- psmelt(ps2)
+
+
+df_test2 <- df2 %>% 
+  ungroup() %>% 
+  group_by(class) %>% 
+    dplyr::filter(Abundance != "NaN") %>% 
+  dplyr::mutate(total_Abundance_Class = sum(Abundance)) %>% 
+  dplyr::filter(Abundance != 0) %>% 
+  dplyr::ungroup() %>% 
+  dplyr::mutate(Class_character = as.character(class),
+                New_Class = case_when(total_Abundance_Class < .05 ~ "Low abundance",
+                                        total_Abundance_Class > .05 ~ Class_character)) %>% 
+  mutate(Extraction = if_else(str_detect(Sample, "gut"), "gut", "exoskeleton")) %>% 
+  mutate(Treatment = str_remove(Sample, "_gut"),
+         Treatment = str_remove(Treatment, "_exoskeleton")) %>% 
+  mutate(level = if_else(str_detect(Sample, "Low"), "low", if_else(str_detect(Sample, "High"), "high", "NA")))
+  
+
+df_bact = df_test2 
+
+library(viridis) 
+library(RColorBrewer)
+mycolors = c(brewer.pal(name="Dark2", n = 8), brewer.pal(name="Paired", n = 8))
+
+
+x2 <- factor(df_bact$New_Class)
+old.lvl2<-levels(x2)
+
+df_bact$Class<-factor(x2, levels=c(sort(old.lvl2[old.lvl2!="Low abundance"], decreasing=F), "Low abundance"))
+
+
+
+
+relative_abundance_bacterial_degraders <- ggplot(df_bact, aes(Treatment, Abundance, fill = genus)) +
+  geom_col()+
+  
+  scale_fill_manual(values = c("#407F7F","#003333", "#6E2C00", "#BA4A00", "#E67E22", "#B7950B", "#7D6608",
+                               "#186A3B", "#28B463", "#45B39D", "#EAFAF1", "#03A9F4",
+                               "#85C1E9", "#21618C", "#154360", "gray40", "#7D3C98", "#D2B4DE",
+                               "#F8BBD0", "#F06292", "#D81B60", "#880E4F", "gray40", "#EF9A9A","gray40", "#7986CB", "#303F9F", "#1B2631", "black", "blue"))+
+  
+  theme(
+    axis.text.y = element_text(size = 12),
+    text = element_text(size = 14))+
+  theme(strip.text.x = element_text(size = 14),
+        legend.text = element_text(size = 12))+
+  labs(x = "",
+       y = "Relative abundance")+
+  theme(legend.position = "bottom",
+        legend.title = element_text("Class"))+
+  theme_test()+
+  facet_grid(.~ Extraction)
+
+relative_abundance_bacterial_degraders
+```
+
+```{r, results = FALSE, warning=FALSE, message=FALSE}
+# final figs
+
+diet_composition_PCoA/relative_abundance_bacterial_BC
+
+extraction_composition_plot/(alpha_single_plot + beta_single_plot)/relative_abundance_bacterial
+
+```
+
