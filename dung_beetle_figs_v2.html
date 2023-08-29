@@ -2631,9 +2631,9 @@ Number of permutations: 999
 
 vegan::adonis2(formula = OTU_distmat_all ~ Treatment_base * Extraction_final, data = df_metadata, permutations = 999, method = &quot;bray&quot;)
                                 Df SumOfSqs      R2      F Pr(&gt;F)   
-Treatment_base                   1   0.9005 0.17367 2.9886  0.005 **
-Extraction_final                 1   0.3628 0.06997 1.2042  0.255   
-Treatment_base:Extraction_final  1   0.3061 0.05903 1.0158  0.425   
+Treatment_base                   1   0.9005 0.17367 2.9886  0.003 **
+Extraction_final                 1   0.3628 0.06997 1.2042  0.253   
+Treatment_base:Extraction_final  1   0.3061 0.05903 1.0158  0.423   
 Residual                        12   3.6159 0.69733                 
 Total                           15   5.1854 1.00000                 
 ---
@@ -2664,8 +2664,8 @@ Number of permutations: 999
 vegan::adonis2(formula = OTU_distmat_all ~ Extraction * Drench, data = df_metadata, permutations = 999, method = &quot;bray&quot;)
                   Df SumOfSqs      R2      F Pr(&gt;F)    
 Extraction         1   2.5029 0.10807 8.4734  0.001 ***
-Drench             1   0.8566 0.03699 2.8999  0.002 ** 
-Extraction:Drench  1   0.3052 0.01318 1.0332  0.383    
+Drench             1   0.8566 0.03699 2.8999  0.001 ***
+Extraction:Drench  1   0.3052 0.01318 1.0332  0.361    
 Residual          66  19.4952 0.84177                  
 Total             69  23.1598 1.00000                  
 ---
@@ -2694,7 +2694,7 @@ vegan::adonis2(formula = OTU_distmat_all ~ Extraction * Treatment_base, data = d
                           Df SumOfSqs      R2      F Pr(&gt;F)    
 Extraction                 1   2.5029 0.10807 8.7958  0.001 ***
 Treatment_base             3   2.0258 0.08747 2.3731  0.001 ***
-Extraction:Treatment_base  3   0.9888 0.04270 1.1584  0.235    
+Extraction:Treatment_base  3   0.9888 0.04270 1.1584  0.250    
 Residual                  62  17.6423 0.76176                  
 Total                     69  23.1598 1.00000                  
 ---
@@ -2706,57 +2706,57 @@ Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&
 <div class="cell-output cell-output-stdout">
 <pre><code>                           pairs Df   SumsOfSqs    F.Model         R2 p.value
 1         Blue_gut vs Blue_whole  1 0.026279813  6.3624083 0.26115679   0.005
-2        Blue_gut vs Control_gut  1 0.002798929  0.6009258 0.04418271   0.620
-3      Blue_gut vs Control_whole  1 0.012979633  2.7686558 0.17557970   0.057
+2        Blue_gut vs Control_gut  1 0.002798929  0.6009258 0.04418271   0.633
+3      Blue_gut vs Control_whole  1 0.012979633  2.7686558 0.17557970   0.060
 4            Blue_gut vs Red_gut  1 0.003997628  0.7915245 0.04212136   0.487
-5          Blue_gut vs Red_whole  1 0.032861789  7.1979313 0.28565564   0.002
-6         Blue_gut vs Silver_gut  1 0.007560344  1.5786090 0.08062927   0.159
+5          Blue_gut vs Red_whole  1 0.032861789  7.1979313 0.28565564   0.006
+6         Blue_gut vs Silver_gut  1 0.007560344  1.5786090 0.08062927   0.181
 7       Blue_gut vs Silver_whole  1 0.029746499  7.2161232 0.28617100   0.002
-8      Blue_whole vs Control_gut  1 0.018127362  5.9256418 0.31310123   0.001
-9    Blue_whole vs Control_whole  1 0.012574741  4.0701458 0.23843650   0.004
+8      Blue_whole vs Control_gut  1 0.018127362  5.9256418 0.31310123   0.003
+9    Blue_whole vs Control_whole  1 0.012574741  4.0701458 0.23843650   0.006
 10         Blue_whole vs Red_gut  1 0.037274256  9.5672435 0.34705115   0.001
-11       Blue_whole vs Red_whole  1 0.002706855  0.7935813 0.04222619   0.519
+11       Blue_whole vs Red_whole  1 0.002706855  0.7935813 0.04222619   0.513
 12      Blue_whole vs Silver_gut  1 0.043368903 11.9318062 0.39863302   0.001
-13    Blue_whole vs Silver_whole  1 0.010602517  3.5726212 0.16560905   0.007
-14  Control_gut vs Control_whole  1 0.005233950  1.5881537 0.16563707   0.203
-15        Control_gut vs Red_gut  1 0.003923163  0.9054006 0.06511144   0.427
-16      Control_gut vs Red_whole  1 0.020005013  5.4637588 0.29591801   0.005
-17     Control_gut vs Silver_gut  1 0.005180638  1.3045289 0.09119691   0.283
-18   Control_gut vs Silver_whole  1 0.015486297  5.0812908 0.28102478   0.001
-19      Control_whole vs Red_gut  1 0.014118243  3.2355795 0.19928944   0.033
-20    Control_whole vs Red_whole  1 0.010240402  2.7738473 0.17585103   0.030
-21   Control_whole vs Silver_gut  1 0.016504595  4.1244595 0.24085195   0.016
-22 Control_whole vs Silver_whole  1 0.004830794  1.5694197 0.10772012   0.165
-23          Red_gut vs Red_whole  1 0.043724267 10.0956612 0.35933168   0.001
-24         Red_gut vs Silver_gut  1 0.002434447  0.5344805 0.02883709   0.712
+13    Blue_whole vs Silver_whole  1 0.010602517  3.5726212 0.16560905   0.004
+14  Control_gut vs Control_whole  1 0.005233950  1.5881537 0.16563707   0.211
+15        Control_gut vs Red_gut  1 0.003923163  0.9054006 0.06511144   0.475
+16      Control_gut vs Red_whole  1 0.020005013  5.4637588 0.29591801   0.006
+17     Control_gut vs Silver_gut  1 0.005180638  1.3045289 0.09119691   0.265
+18   Control_gut vs Silver_whole  1 0.015486297  5.0812908 0.28102478   0.003
+19      Control_whole vs Red_gut  1 0.014118243  3.2355795 0.19928944   0.035
+20    Control_whole vs Red_whole  1 0.010240402  2.7738473 0.17585103   0.031
+21   Control_whole vs Silver_gut  1 0.016504595  4.1244595 0.24085195   0.018
+22 Control_whole vs Silver_whole  1 0.004830794  1.5694197 0.10772012   0.150
+23          Red_gut vs Red_whole  1 0.043724267 10.0956612 0.35933168   0.002
+24         Red_gut vs Silver_gut  1 0.002434447  0.5344805 0.02883709   0.691
 25       Red_gut vs Silver_whole  1 0.034959065  8.9920519 0.33313703   0.002
 26       Red_whole vs Silver_gut  1 0.051080686 12.5514692 0.41083030   0.001
-27     Red_whole vs Silver_whole  1 0.004780976  1.4050614 0.07240696   0.204
+27     Red_whole vs Silver_whole  1 0.004780976  1.4050614 0.07240696   0.220
 28    Silver_gut vs Silver_whole  1 0.040470987 11.1598667 0.38271323   0.001
    p.adjusted sig
 1       0.140    
 2       1.000    
 3       1.000    
 4       1.000    
-5       0.056    
+5       0.168    
 6       1.000    
 7       0.056    
-8       0.028   .
-9       0.112    
+8       0.084    
+9       0.168    
 10      0.028   .
 11      1.000    
 12      0.028   .
-13      0.196    
+13      0.112    
 14      1.000    
 15      1.000    
-16      0.140    
+16      0.168    
 17      1.000    
-18      0.028   .
-19      0.924    
-20      0.840    
-21      0.448    
+18      0.084    
+19      0.980    
+20      0.868    
+21      0.504    
 22      1.000    
-23      0.028   .
+23      0.056    
 24      1.000    
 25      0.056    
 26      0.028   .

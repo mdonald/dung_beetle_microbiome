@@ -225,7 +225,7 @@ adon.results_all
 ## since only treatment is found to be significant, stop here and don't proceed with pairwise comparison
 
 ## pairwise permanova
-#library(pairwiseAdonis)
+library(pairwiseAdonis)
 #pairwise.adonis(OTU_distmat_all,df_metadata$trt_base_extraction, p.adjust.m ="bonferroni")# -- before gut and control whole are different, but that's it
 ```
 
@@ -873,7 +873,8 @@ Presumed drench degrader
 
 drench <- subset_taxa(DATA_composition_tax_drench_ID, genus=="Stenotrophomonas" |
                         genus == "Aeromonas" |
-                        genus == "Pseudomonas")
+                        genus == "Pseudomonas" |
+                        genus == "Burkholderia")
 
 
 ## bacteria shared figure
@@ -941,7 +942,71 @@ relative_abundance_bacterial_degraders <- ggplot(df_bact, aes(Extraction, Abunda
 
 relative_abundance_bacterial_degraders
 
+
+
 ```
+```{r, results = FALSE, warning=FALSE, message=FALSE}
+## get the % of each of these putative degraders in the overall commmunity
+# drench <- subset_taxa(DATA_composition_tax_drench_ID, genus=="Stenotrophomonas" |
+#                         genus == "Aeromonas" |
+#                         genus == "Pseudomonas" |
+#                         genus == "Burkholderia")
+
+
+## bacteria shared figure
+ps <- tax_glom(DATA_composition_tax_drench_ID, "genus")
+#ps0 <- transform_sample_counts(ps, function(x) x / sum(x))
+ps1 <- merge_samples(ps, "trt_base_extraction")
+ps2 <- transform_sample_counts(ps1, function(x) x / sum(x))
+df2 <- psmelt(ps2)
+
+
+df_test2 <- df2 %>% 
+  ungroup() %>% 
+  group_by(class) %>% 
+    dplyr::filter(Abundance != "NaN") %>% 
+  dplyr::mutate(total_Abundance_Class = sum(Abundance)) %>% 
+  dplyr::filter(Abundance != 0) %>% 
+  dplyr::ungroup() %>% 
+  dplyr::mutate(Class_character = as.character(class),
+                New_Class = case_when(total_Abundance_Class < .05 ~ "Low abundance",
+                                        total_Abundance_Class > .05 ~ Class_character)) %>% 
+  mutate(Extraction = if_else(str_detect(Sample, "gut"), "gut", "exoskeleton")) %>% 
+  mutate(Treatment = str_remove(Sample, "_gut"),
+         Treatment = str_remove(Treatment, "_whole"),
+        Treatment_base = str_remove(Treatment, "_Low"),
+         Treatment_base = str_remove(Treatment_base, "_High")) %>% 
+  mutate(level = if_else(str_detect(Sample, "Low"), "low", if_else(str_detect(Sample, "High"), "high", "NA")))
+  
+
+df_bact = df_test2 %>% 
+  mutate(trt_order = fct_relevel(Treatment_base, 
+            "Before", "Control", "Red", 
+            "Blue", "Silver"))
+library(viridis) 
+library(RColorBrewer)
+mycolors = c(brewer.pal(name="Dark2", n = 8), brewer.pal(name="Paired", n = 8))
+
+
+x2 <- factor(df_bact$New_Class)
+old.lvl2<-levels(x2)
+
+df_bact$Class<-factor(x2, levels=c(sort(old.lvl2[old.lvl2!="Low abundance"], decreasing=F), "Low abundance"))
+
+check <- df_bact %>% 
+group_by(Sample) %>% 
+  summarize(abundance = sum(Abundance))
+
+degraders <- df_bact %>% 
+  filter(genus=="Stenotrophomonas" |
+                         genus == "Aeromonas" |
+                         genus == "Pseudomonas" |
+                         genus == "Burkholderia")
+# these degraders make up between 0.001 and 2.9% of the total abundances across the taxa - probably don't want to split this figure out
+  
+```
+
+
 
 ```{r}
 # degraders pooled at each grouping
@@ -1019,5 +1084,70 @@ diet_composition_PCoA/relative_abundance_bacterial_BC
 
 extraction_composition_plot/(alpha_single_plot + beta_single_plot)/relative_abundance_bacterial
 
+```
+
+
+```{r, warning=FALSE, message=FALSE}
+# check for differences in concentration for each of the parasiticides
+
+
+psotu2veg <- function(physeq) {
+  OTU <- otu_table(physeq)
+  if (taxa_are_rows(OTU)) {
+    OTU <- t(OTU)
+  }
+  return(as(OTU, "matrix"))
+}
+
+trt_list <- c("Red", "Silver", "Blue")   
+ext_list <-c("gut", "exoskeleton")
+
+df_concentration_comparison <- data.frame(trt=character(),
+                 ext=character(),
+                 name=character(),
+                 R2=integer(),
+                 F=integer(),
+                 df=integer(),
+                  'Pr(>F)' = integer(),
+                 stringsAsFactors=FALSE)
+
+
+
+
+for(i in 1:length(trt_list)){
+    for(j in 1:length(ext_list)){
+dataset_subset <- DATA_normalized %>%
+    subset_samples(Treatment_base == trt_list[i]) %>%
+    subset_samples(Extraction_final == ext_list[j]) 
+
+
+dataset_subset <- prune_taxa(taxa_sums(dataset_subset)>0, dataset_subset)
+
+#ordinate_subset <- function(dataset_subset){
+    
+
+df_metadata <- data.frame(sample_data(dataset_subset)) %>% 
+  unite(trt_extraction, c("Treatment", "Extraction_final"), sep = "_", remove = F) 
+
+df_OTU <- psotu2veg(dataset_subset) ## taxa are now columns and rows are samples, this is the correct format for vegan
+
+dist.mat_all <- vegdist(df_OTU, method = "bray", binary=F)
+
+OTU_distmat_all <-
+  as.matrix(dist.mat_all, labels = T)
+
+z = vegan::adonis2(OTU_distmat_all ~ Treatment, data = df_metadata, method="bray",perm=999) ## Treatment is high vs low
+
+df_i <- data.frame(
+    trt = trt_list[i], ext = ext_list[j], name = rownames(z), R2 = z$R2, F = z$F, df = z$Df,
+    'Pr(>F)' = z$'Pr(>F)'
+  )[1,] %>% 
+  filter(name == "Treatment")
+
+
+  df_concentration_comparison <- bind_rows(df_concentration_comparison, df_i)    
+    }}
+
+write.table(df_concentration_comparison, file = "df_concentration_comparison.txt", sep = ",", quote = FALSE, row.names = F)
 ```
 
