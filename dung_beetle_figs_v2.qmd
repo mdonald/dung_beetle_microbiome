@@ -173,15 +173,26 @@ DATA_diet <- prune_taxa(taxa_sums(DATA_diet)>0, DATA_diet)
 
 ord <- ordinate(DATA_diet, "MDS", "bray")
 
-diet_composition_PCoA <- plot_ordination(DATA_diet, ord, color = "Extraction_final", shape = "Treatment") +
+diet_composition_PCoA <- plot_ordination(DATA_diet, ord, color = "Treatment", shape = "Extraction") +
   geom_point(size = 3)+
-  scale_color_manual(values = c("black","#7D151A"))+
+  scale_color_manual(values = c("#327fa8","black"))+
   scale_shape_manual(values = c(15, 19))+
-  stat_ellipse(aes(group = Treatment, linetype = Treatment))+
-  scale_linetype_manual(values=c("dashed", "solid"))+
+  stat_ellipse(aes(group = Treatment))+
+ # scale_linetype_manual(values=c("dashed", "solid"))+
   theme_test()+
   labs(x = "MDS1", y = "MDS2")
-    
+
+diet_composition_PCoA +
+             theme(plot.title = element_text(size = 12),
+               axis.text.y = element_text(colour = "black", size = 12, face = "bold",
+                                          angle = 90, hjust = 0.5), 
+               axis.text.x = element_text(colour = "black", face = "bold", size = 12), 
+               legend.text = element_text(size = 12, face ="bold", colour ="black"), 
+               legend.position = "right", axis.title.y = element_text(face = "bold", size = 14), 
+               axis.title.x = element_text(face = "bold", size = 14, colour = "black"), 
+               legend.title = element_text(size = 14, colour = "black", face = "bold"), 
+               panel.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1.2),
+               legend.key=element_blank())
 
 psotu2veg <- function(physeq) {
   OTU <- otu_table(physeq)
@@ -223,6 +234,10 @@ adon.results_all<-vegan::adonis2(OTU_distmat_all ~ Treatment_base*Extraction_fin
 
 adon.results_all
 ## since only treatment is found to be significant, stop here and don't proceed with pairwise comparison
+
+## check for differences in dispersion
+mod <- betadisper(dist.mat_all, df_metadata$Treatment_base)
+anova(mod)
 
 ## pairwise permanova
 library(pairwiseAdonis)
@@ -325,7 +340,7 @@ ggplot(site.scrs, aes(MDS1, MDS2, color = Treatment_base, shape = Extraction))+
   scale_color_manual(values = c("#72122A", "black","#D1686D","#EA9FB0"))+
   stat_ellipse()+
   theme_test()+
-  facet_grid(~Extraction)
+  facet_grid(Treatment_base~Extraction)
 
 adon.results_all<-vegan::adonis2(OTU_distmat_all ~ Extraction*Treatment_base, data = df_metadata, method="bray",perm=999) ## Currently dropping level (even though it comes out as significant, but weak explanatory value with R2)
 
@@ -768,6 +783,28 @@ relative_abundance_bacterial <- ggplot(df_bact, aes(Extraction, Abundance, fill 
   facet_grid(.~ trt_order)
 
 relative_abundance_bacterial
+
+relative_abundance_bacterial <- ggplot(df_bact, aes(trt_order, Abundance, fill = Class)) +
+  geom_col()+
+  
+  scale_fill_manual(values = c("#6E2C00", "#BA4A00", "#E67E22", "#B7950B", "#7D6608",
+                               "#186A3B", "#28B463", "#45B39D", "#EAFAF1", "#03A9F4",
+                               "#85C1E9", "#21618C", "#154360", "gray40", "#7D3C98", "#D2B4DE",
+                               "#F8BBD0", "#F06292", "#D81B60", "#880E4F", "gray40", "#EF9A9A","gray40", "#7986CB", "#303F9F", "#1B2631", "black", "blue"))+
+  
+  theme(
+    axis.text.y = element_text(size = 12),
+    text = element_text(size = 14))+
+  theme(strip.text.x = element_text(size = 14),
+        legend.text = element_text(size = 12))+
+  labs(x = "Extraction",
+       y = "Relative abundance")+
+  theme(legend.position = "bottom",
+        legend.title = element_text("Class"))+
+  theme_test()+
+  facet_grid(Extraction~.)
+
+relative_abundance_bacterial
 ```
 
 ```{r, warning=FALSE, message=FALSE}
@@ -848,7 +885,17 @@ relative_abundance_bacterial <- ggplot(df_test2, aes(Drench, Abundance, fill = C
   facet_grid(.~ Extraction)+
  theme(legend.position = "bottom")
 
-relative_abundance_bacterial
+relative_abundance_bacterial+
+    theme(plot.title = element_text(size = 12),
+               axis.text.y = element_text(colour = "black", size = 12, face = "bold",
+                                          angle = 90, hjust = 0.5), 
+               axis.text.x = element_text(colour = "black", face = "bold", size = 12), 
+               legend.text = element_text(size = 12, face ="bold", colour ="black"), 
+               legend.position = "right", axis.title.y = element_text(face = "bold", size = 14), 
+               axis.title.x = element_text(face = "bold", size = 14, colour = "black"), 
+               legend.title = element_text(size = 14, colour = "black", face = "bold"), 
+               panel.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1.2),
+               legend.key=element_blank())
 ```
 
 
@@ -920,7 +967,7 @@ df_bact$Class<-factor(x2, levels=c(sort(old.lvl2[old.lvl2!="Low abundance"], dec
 
 
 
-relative_abundance_bacterial_degraders <- ggplot(df_bact, aes(Extraction, Abundance, fill = genus)) +
+relative_abundance_bacterial_degraders <- ggplot(df_bact, aes(trt_order, Abundance, fill = genus)) +
   geom_col()+
   
   scale_fill_manual(values = c("#407F7F","#003333", "#6E2C00", "#BA4A00", "#E67E22", "#B7950B", "#7D6608",
@@ -938,9 +985,19 @@ relative_abundance_bacterial_degraders <- ggplot(df_bact, aes(Extraction, Abunda
   theme(legend.position = "bottom",
         legend.title = element_text("Class"))+
   theme_test()+
-  facet_grid(.~ trt_order)
+  facet_grid(Extraction~ .)
 
-relative_abundance_bacterial_degraders
+relative_abundance_bacterial_degraders+
+       theme(plot.title = element_text(size = 12),
+               axis.text.y = element_text(colour = "black", size = 12, face = "bold",
+                                          angle = 90, hjust = 0.5), 
+               axis.text.x = element_text(colour = "black", face = "bold", size = 12), 
+               legend.text = element_text(size = 12, face ="bold", colour ="black"), 
+               legend.position = "right", axis.title.y = element_text(face = "bold", size = 14), 
+               axis.title.x = element_text(face = "bold", size = 14, colour = "black"), 
+               legend.title = element_text(size = 14, colour = "black", face = "bold"), 
+               panel.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1.2),
+               legend.key=element_blank())
 
 
 
@@ -1088,9 +1145,167 @@ extraction_composition_plot/(alpha_single_plot + beta_single_plot)/relative_abun
 
 
 ```{r, warning=FALSE, message=FALSE}
-# check for differences in concentration for each of the parasiticides
+# check for differences in composition between each parasiticide on gut and exoskeleton and control
 
 
+psotu2veg <- function(physeq) {
+  OTU <- otu_table(physeq)
+  if (taxa_are_rows(OTU)) {
+    OTU <- t(OTU)
+  }
+  return(as(OTU, "matrix"))
+}
+
+trt_list <- c("Red", "Silver", "Blue")   
+ext_list <-c("gut", "exoskeleton")
+
+df_parasiticide_comparison <- data.frame(trt=character(),
+                 ext=character(),
+                 name=character(),
+                 R2=integer(),
+                 F=integer(),
+                 df=integer(),
+                  'Pr(>F)' = integer(),
+                 stringsAsFactors=FALSE)
+
+df_parasiticide_comparison_betadisp <- data.frame(trt=character(),
+                 ext=character(),
+                 F=integer(),
+                 df=integer(),
+                  'Pr(>F)' = integer(),
+                 stringsAsFactors=FALSE)
+
+
+for(i in 1:length(trt_list)){
+    for(j in 1:length(ext_list)){
+dataset_subset <- DATA_normalized %>%
+    subset_samples(Treatment_base == trt_list[i] |
+                     Treatment_base== "Control") %>%
+    subset_samples(Extraction_final == ext_list[j]) 
+
+
+dataset_subset <- prune_taxa(taxa_sums(dataset_subset)>0, dataset_subset)
+
+#ordinate_subset <- function(dataset_subset){
+    
+
+df_metadata <- data.frame(sample_data(dataset_subset)) %>% 
+  unite(trt_extraction, c("Treatment", "Extraction_final"), sep = "_", remove = F) 
+
+df_OTU <- psotu2veg(dataset_subset) ## taxa are now columns and rows are samples, this is the correct format for vegan
+
+dist.mat_all <- vegdist(df_OTU, method = "bray", binary=F)
+
+OTU_distmat_all <-
+  as.matrix(dist.mat_all, labels = T)
+
+z = vegan::adonis2(OTU_distmat_all ~ Treatment_base, data = df_metadata, method="bray",perm=999) ## Treatment_base is parasiticide vs control
+
+df_i <- data.frame(
+    trt = trt_list[i], ext = ext_list[j], name = rownames(z), R2 = z$R2, F = z$F, df = z$Df,
+    'Pr(>F)' = z$'Pr(>F)'
+  )[1,] 
+
+
+  df_parasiticide_comparison <- bind_rows(df_parasiticide_comparison, df_i)    
+  
+  
+  
+  mod <- betadisper(dist.mat_all, df_metadata$Treatment_base)
+ y = anova(mod)
+ df_y <- data.frame(
+    trt = trt_list[i], ext = ext_list[j], F = y$`F value`, df = y$Df,
+    'Pr(>F)' = y$'Pr(>F)'
+  )[1,] 
+ 
+ df_parasiticide_comparison_betadisp <- bind_rows(df_parasiticide_comparison_betadisp, df_y)
+    }}
+
+write.table(format(df_parasiticide_comparison, digits = 2), file = "df_parasiticide_comparison.txt", sep = ",", quote = FALSE, row.names = F)
+
+write.table(format(df_parasiticide_comparison_betadisp, digits = 2), file = "df_parasiticide_comparison_betadisp.txt", sep = ",", quote = FALSE, row.names = F)
+```
+
+```{r, warning=FALSE, message=FALSE}
+
+## composite PCOA comparing each parasiticide to the control for gut and exoskeleton
+pcoa_df_composite <- data.frame(MDS1=integer(),
+                 MDS2=integer(),
+                 Samplename=character(),
+                 trt_extraction=character(),
+                 Treatment=character(),
+                 Treatment_base=character(),
+                 Extraction_final = character(),
+                 Drench = character(),
+                 Parasiticide = character(),
+                 group = character(),
+                 stringsAsFactors=FALSE)
+
+
+
+for(i in 1:length(trt_list)){
+    for(j in 1:length(ext_list)){
+dataset_subset <- DATA_normalized %>%
+    subset_samples(Treatment_base == trt_list[i] |
+                     Treatment_base== "Control") %>%
+    subset_samples(Extraction_final == ext_list[j]) 
+
+
+dataset_subset <- prune_taxa(taxa_sums(dataset_subset)>0, dataset_subset)
+
+
+df_metadata <- data.frame(sample_data(dataset_subset)) %>% 
+  unite(trt_extraction, c("Treatment", "Extraction_final"), sep = "_", remove = F) 
+
+df_OTU <- psotu2veg(dataset_subset) ## taxa are now columns and rows are samples, this is the correct format for vegan
+
+dist.mat_all <- vegdist(df_OTU, method = "bray", binary=F)
+
+    
+
+pcoa <- cmdscale(dist.mat_all, eig = F, add = F)
+
+pcoa_df <- data.frame(pcoa)
+colnames(pcoa_df) <- c("MDS1", "MDS2")
+
+pcoa_df <- pcoa_df %>% 
+bind_cols(df_metadata) %>% 
+  mutate(Parasiticide = "Treatment_base",
+         group = trt_list[i]) %>% 
+  select(MDS1, MDS2, Samplename, trt_extraction, Treatment, Treatment_base,
+                 Extraction_final, Drench, Parasiticide, group)
+
+
+  pcoa_df_composite <- bind_rows(pcoa_df_composite, pcoa_df)   
+    }}
+
+ggplot(pcoa_df_composite, aes(x = MDS1, y = MDS2, color = Treatment_base, shape = Extraction_final)) + 
+  geom_point(size = 4) +
+    scale_shape_manual(values = c(15, 19))+
+   scale_color_manual(values = c("#72122A", "black","#D1686D","#EA9FB0"))+
+  xlab("MDS1") +
+  ylab("MDS2") + 
+  stat_ellipse()+
+  theme_test()+
+  facet_grid(Extraction_final~group)+
+           theme(plot.title = element_text(size = 12),
+               axis.text.y = element_text(colour = "black", size = 12, face = "bold",
+                                          angle = 90, hjust = 0.5), 
+               axis.text.x = element_text(colour = "black", face = "bold", size = 12), 
+               legend.text = element_text(size = 12, face ="bold", colour ="black"), 
+               legend.position = "right", axis.title.y = element_text(face = "bold", size = 14), 
+               axis.title.x = element_text(face = "bold", size = 14, colour = "black"), 
+               legend.title = element_text(size = 14, colour = "black", face = "bold"), 
+               panel.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1.2),
+               legend.key=element_blank())
+
+
+
+       
+
+```
+
+```{r, warning=FALSE, message=FALSE}
 psotu2veg <- function(physeq) {
   OTU <- otu_table(physeq)
   if (taxa_are_rows(OTU)) {
@@ -1150,4 +1365,3 @@ df_i <- data.frame(
 
 write.table(df_concentration_comparison, file = "df_concentration_comparison.txt", sep = ",", quote = FALSE, row.names = F)
 ```
-
